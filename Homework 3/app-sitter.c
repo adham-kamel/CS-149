@@ -41,31 +41,15 @@ void add_to_list(struct task **head_ptr, char **argv, int count, int starting_in
     struct task *node = malloc(sizeof(*node));
     node->argv = add_arguments;
     node->count = count;
-    for(int i = 0; i < ending_index - starting_index; i++){
-        printf("%s\n",node->argv[i]);
-    }
-    printf("\n");
     node->next = *head_ptr;
     node->fd_out = fd_out;
     node->fd_err = fd_err;
     *head_ptr = node;
 }
 
-void print_list(struct task *head) {
-    while(head != NULL){
-        printf("Arg count: %d\n", head-> count);
-        for (int i = 0; i < head->count; i++){
-            printf("%s\n", head->argv[i]);
-        }
-        printf("\n");
-        head = head->next;
-    }
-}
-
 void execute(struct task *head){
     while(head != NULL){
         if ((head->pid = fork()) == 0){
-            printf("Child Process %s:\n", head->argv[0]);
             dup2(head->fd_out, 1);
             dup2(head->fd_err, 2);
             int rc = execvp(head->argv[0], head->argv);
@@ -81,14 +65,12 @@ void execute(struct task *head){
 void time_taken(struct task *head, int *count, pid_t cpid, time_t end_time){
     while(head != NULL){
         if (head->pid == cpid){
-            head->time = end_time - head->start_time;
+            head->time = (end_time - head->start_time);
             dup2(head->fd_out, 1);
             dup2(head->fd_err, 2);
-            printf("Time Taken for Process %s: %ld\n", head->argv[0], head->time);
             if (head->time > 2){
                 (*count)++;
                 if ((head->pid = fork()) == 0){
-                    printf("Restarting Process %s:\n", head->argv[0]);
                     dup2(head->fd_out, 1);
                     dup2(head->fd_err, 2);
                     int rc = execvp(head->argv[0], head->argv);
@@ -109,7 +91,6 @@ void time_taken(struct task *head, int *count, pid_t cpid, time_t end_time){
 }
 
 int main(int argc, char **argv){
-    printf("----------------------------ADD TO LIST-----------------------------\n");
     struct task *head = NULL;
     char **all_arguments = malloc((argc + 1) * sizeof(*all_arguments));
     int starting_index = 0;
@@ -135,11 +116,7 @@ int main(int argc, char **argv){
             }
         }
     }
-    printf("-----------------------------PRINT LIST-----------------------------\n");
-    print_list(head);
-    printf("------------------------------EXECUTE--------------------------------\n");
     execute(head);
-    printf("-----------------------------TIME CHECK------------------------------\n");
     for (int i = 0; i < total_count; i++){
         int stat;
         pid_t cpid = wait(&stat);
@@ -149,7 +126,7 @@ int main(int argc, char **argv){
             fprintf(stderr, "exited rc = %d\n", WEXITSTATUS(stat));
         }
         if (WIFSIGNALED(stat)){
-            fprintf(stderr, "exited rc = %d\n", WTERMSIG(stat));
+            fprintf(stderr, "signal %d\n", WTERMSIG(stat));
         }
     }
     return 0;
